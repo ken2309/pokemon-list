@@ -1,7 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { STATUS } from "./status";
 import pokemonApi from "../apis/pokemonApi";
-import { IPokemon } from "../types/IPokemon";
+import { IPokemonType, IPokemon } from "../types/IPokemon";
+import { perPage } from "../constant";
 
 
 export const fetchAsyncPokemon = createAsyncThunk(
@@ -9,33 +10,23 @@ export const fetchAsyncPokemon = createAsyncThunk(
   async () => {
     try {
       const res = await pokemonApi.getPokemon();
-      const resResult = res.data.results;
-      const resultLength = res.data.results.length;
-      const pokemonDetailArr = [];
-      const perPage = 48;
-
-      if (resultLength > 0) {
-        if (resultLength > perPage) {
-          let i = 0;
-          do {
-            const resp = await pokemonApi.getPokemonDetail(resResult[i].url.split("/").filter(Boolean).pop() + '');
-            pokemonDetailArr.push(resp.data)
-            i++;
-          } while (i < perPage)
-        }
-        else {
-          resResult.forEach(async (item: { name: string, url: string }) => {
-            const resp = await pokemonApi.getPokemonDetail(item.url.split("/").filter(Boolean).pop() + '');
-            pokemonDetailArr.push(resp.data)
-          });
-        }
-      }
+      let pokemonDetailArr: any = [];
       return { ...res.data, currentList: pokemonDetailArr };
     } catch (error) {
       console.log(error);
     }
   }
 );
+
+// export const fetchAsyncPokemonDetail = createAsyncThunk('POKEMON/fetchAsyncPokemonDetail', async (item: { name: string; url: string }) => {
+//   try {
+//     const res = await pokemonApi.getPokemonDetail(item.url.split("/").filter(Boolean).pop() + '');
+//     return
+//   } catch (error) {
+//     console.log(error);
+//   }
+// })
+
 
 export interface IPokemonSilce {
   POKEMON: {
@@ -79,7 +70,7 @@ const pokemonSlice = createSlice({
     builder.addCase(fetchAsyncPokemon.fulfilled, (state, action) => {
       console.log("fetchAsyncPokemon.fulfilled");
       state.POKEMON = { ...action.payload }
-      state.currentList = [ ...action.payload?.currentList ]
+      state.currentList = [...action.payload?.currentList]
       state.status = STATUS.SUCCESS
     })
     builder.addCase(fetchAsyncPokemon.rejected, (state, action) => {

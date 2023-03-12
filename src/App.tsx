@@ -1,12 +1,15 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import pokemonApi from './apis/pokemonApi';
 
 import './App.css';
+import { perPage } from './constant';
 import { fetchAsyncPokemon, IPokemonSilce } from './redux/pokemonSlice';
 
 import { fetchAsyncType, IPokemonTypeSilce } from './redux/pokemonTypeSlice';
 import { STATUS } from './redux/status';
 import { AppDispatch } from './redux/store';
+import { IPokemon } from './types/IPokemon';
 
 function App() {
   let isRender = false;
@@ -64,7 +67,7 @@ function App() {
               <>loading</>
               :
               listPoke.status === STATUS.SUCCESS &&
-              `${listPoke.POKEMON.count} results found.`
+              `${listPoke.POKEMON.results.length} results found.`
           }
         </div>
       </section>
@@ -75,25 +78,47 @@ function App() {
             <>loading</>
             :
             listPoke.status === STATUS.SUCCESS ?
-              listPoke.currentList.map((item, index) =>
-                <div key={index}>
-                  <div className='h-24 w-24 mx-auto'>
-                    <img src={item.sprites.other['official-artwork'].front_default} alt={item.name} title={item.name} loading="lazy" width="100" height="100" />
-                  </div>
-                  <div className='text-center'>
-                    {item.name}
-                  </div>
-                </div>
+              listPoke.POKEMON.results.slice(0, -(listPoke.POKEMON.results.length - perPage)).map((item, index) =>
+                <PokemonDetail key={index} name={item.name} url={item.url} />
               )
               :
               <>FAILED</>
         }
       </section>
-      <div className="mt-8 flex justify-center">
-        <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none" disabled={true}>Prev</button>
-        <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none">Next</button></div>
+      {listPoke.status === STATUS.SUCCESS &&
+        listPoke.POKEMON.results.length > perPage &&
+        <div className="mt-8 flex justify-center">
+          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none" disabled={true}>Prev</button>
+          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none">Next</button>
+        </div>
+      }
     </div>
   );
 }
 
+
+const PokemonDetail = (props: { key: number; name: string, url: string }) => {
+  const [poke, setPoke] = useState<IPokemon>();
+  let isRender = false;
+  const fetchDetailPokemon = async () => {
+    const res = await pokemonApi.getPokemonDetail(props.url.split("/").filter(Boolean).pop() + '');
+    setPoke(res.data)
+  }
+  useEffect(() => {
+    if (!isRender) {
+      fetchDetailPokemon();
+      isRender = true
+    }
+  }, [])
+  return (
+    <div>
+      <div className='h-24 w-24 mx-auto'>
+        <img src={poke?.sprites.other['official-artwork'].front_default} alt={props.name} title={props.name} loading="lazy" width="100" height="100" />
+      </div>
+      <div className='text-center'>
+        {props.name}
+      </div>
+    </div>
+  )
+}
 export default App;
