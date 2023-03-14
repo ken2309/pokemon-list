@@ -1,41 +1,51 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import pokemonApi from './apis/pokemonApi';
 
 import './App.css';
+import BtnType from './components/BtnType';
+import PokemonDetail from './components/PokemonDetail';
 import { perPage } from './constant';
 import { fetchAsyncPokemon, IPokemonSilce } from './redux/pokemonSlice';
 
 import { fetchAsyncType, IPokemonTypeSilce } from './redux/pokemonTypeSlice';
 import { STATUS } from './redux/status';
 import { AppDispatch } from './redux/store';
-import { IPokemon } from './types/IPokemon';
 
 function App() {
   let isRender = false;
   const dispatch = useDispatch<AppDispatch>();
   const listType: IPokemonTypeSilce = useSelector((state: any) => state.POKEMON_TYPE)
   const listPoke: IPokemonSilce = useSelector((state: any) => state.POKEMON)
+  const [dataRange, setRange] = useState([0, - perPage])
   useEffect(
     () => {
       //== START initialize function
       if (!isRender) {
         dispatch(fetchAsyncType())
-        dispatch(fetchAsyncPokemon())
+        dispatch(fetchAsyncPokemon());
         // eslint-disable-next-line react-hooks/exhaustive-deps
         isRender = true;
       }
+      // if (dataRange[1] < 0) { setRange([0, listPoke.POKEMON.results.length - perPage]); }
       //== END initialize function
-
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  console.log("======= listType =======");
-  console.log(listType);
-  console.log("=========================");
-  console.log("======= listPoke =======");
-  console.log(listPoke);
+
+  const handlePaginationClick = (type: string) => {
+    switch (type) {
+      case "next":
+        setRange([dataRange[0] + perPage, dataRange[1] - perPage]);
+        break;
+      case "prev":
+        setRange([dataRange[0] - perPage, dataRange[1] + perPage]);
+        break;
+      default:
+        break;
+    }
+  }
+  console.log("home", listPoke.currentList[0]);
   return (
     <div className="App">
       <section className='mx-auto max-w-screen-xl'>
@@ -50,11 +60,7 @@ function App() {
                 :
                 listType.status === STATUS.SUCCESS ?
                   <div>
-                    {listType.TYPE?.results?.map((item, index) =>
-                      <button className='px-2 py-2 mx-2 my-2 border-red-900 border-2 rounded-md font-bold text-red-900' key={index}>
-                        {item.name}
-                      </button>
-                    )}
+                    {listType.TYPE?.results?.map((item, index) => <BtnType key={index} type={item} listTypeOnChoose={listType.TYPE.results.filter(e => e.isActive)} typeDetail={listType.TYPE_DETAIL[index]} curPokemonList={listPoke.currentList} index={index} />)}
                   </div>
                   :
                   <>FAILED</>
@@ -67,7 +73,7 @@ function App() {
               <>loading</>
               :
               listPoke.status === STATUS.SUCCESS &&
-              `${listPoke.POKEMON.results.length} results found.`
+              `${listPoke.currentList.length} results found.`
           }
         </div>
       </section>
@@ -78,7 +84,7 @@ function App() {
             <>loading</>
             :
             listPoke.status === STATUS.SUCCESS ?
-              listPoke.POKEMON.results.slice(0, -(listPoke.POKEMON.results.length - perPage)).map((item, index) =>
+              listPoke.currentList.slice(dataRange[0], -dataRange[1]).map((item, index) =>
                 <PokemonDetail key={index} name={item.name} url={item.url} />
               )
               :
@@ -88,37 +94,12 @@ function App() {
       {listPoke.status === STATUS.SUCCESS &&
         listPoke.POKEMON.results.length > perPage &&
         <div className="mt-8 flex justify-center">
-          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none" disabled={true}>Prev</button>
-          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none">Next</button>
+          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none" disabled={dataRange[0] === 0} onClick={() => handlePaginationClick('prev')}>Prev</button>
+          <button className="p-2 bg-red-900 rounded-md text-white mr-4 disabled:opacity-40 disabled:cursor-not-allowed select-none" disabled={dataRange[1] === listPoke.currentList.length || listPoke.currentList.length <= perPage} onClick={() => handlePaginationClick('next')}>Next</button>
         </div>
       }
     </div>
   );
 }
 
-
-const PokemonDetail = (props: { key: number; name: string, url: string }) => {
-  const [poke, setPoke] = useState<IPokemon>();
-  let isRender = false;
-  const fetchDetailPokemon = async () => {
-    const res = await pokemonApi.getPokemonDetail(props.url.split("/").filter(Boolean).pop() + '');
-    setPoke(res.data)
-  }
-  useEffect(() => {
-    if (!isRender) {
-      fetchDetailPokemon();
-      isRender = true
-    }
-  }, [])
-  return (
-    <div>
-      <div className='h-24 w-24 mx-auto'>
-        <img src={poke?.sprites.other['official-artwork'].front_default} alt={props.name} title={props.name} loading="lazy" width="100" height="100" />
-      </div>
-      <div className='text-center'>
-        {props.name}
-      </div>
-    </div>
-  )
-}
 export default App;

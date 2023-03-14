@@ -52,7 +52,6 @@ export interface IPokemon {
 }
 
 export interface IPokemonType {
-  damage_relations: {
     double_damage_from: object[];
     double_damage_to: object[];
     half_damage_from: object[];
@@ -76,5 +75,4 @@ export interface IPokemonType {
       };
       slot: number;
     }[];
-  }
 }
